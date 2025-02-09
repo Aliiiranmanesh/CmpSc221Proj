@@ -80,3 +80,12 @@ public class Room {
         tenants = temp;
     }
 }
+class PetRoom extends Room {
+    String petType;
+}
+class SmokingRoom extends Room {
+    boolean smokeRoom = true;
+}
+class RemodeledRoom extends Room {
+    int additionalCharges+=50;
+}
