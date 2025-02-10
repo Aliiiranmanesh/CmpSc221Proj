@@ -1,3 +1,9 @@
+package documents;
+
+import Building.Room;
+import Owner.LandLord;
+import occupant.Tenant;
+
 public class Lease {
     Room room;
     Tenant tenant;

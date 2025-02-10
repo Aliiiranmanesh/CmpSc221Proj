@@ -1,3 +1,7 @@
+package Owner;
+
+import Building.Property;
+
 public class LandLord {
     private String name;
     private Property[] Properties;

@@ -1,3 +1,5 @@
+package Building;
+
 public class Property {
     private Room[] rooms;
     private String address;
@@ -35,7 +37,7 @@ public class Property {
     public String listRooms() {
         String roomList = "";
         for (Room room : rooms) {
-            roomList += "Room: " + room.getRoomNumber() + " with the description: " + room.getDescription() + "\n";
+            roomList += "Building.Room: " + room.getRoomNumber() + " with the description: " + room.getDescription() + "\n";
         }
         return roomList;
     }

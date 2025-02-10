@@ -1,3 +1,7 @@
+package occupant;
+
+import documents.Lease;
+
 public class Tenant {
     String name;
     int creditScore;
@@ -43,6 +47,6 @@ public class Tenant {
     }
 
     public void payRent() {
-        lease.setBalance(lease.getBalance() - lease.room.getRent());
+        lease.setBalance(lease.getBalance() - lease.getRoom().getRent());
     }
 }

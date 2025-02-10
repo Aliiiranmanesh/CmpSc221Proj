@@ -1,3 +1,7 @@
+package Building;
+
+import occupant.Tenant;
+
 public class Room {
     private String description;
     private double Rent;
@@ -40,7 +44,7 @@ public class Room {
         return isOccupied;
     }
 
-        public void setOccupied(boolean occupied) {
+    public void setOccupied(boolean occupied) {
         isOccupied = occupied;
     }
 
@@ -79,13 +83,4 @@ public class Room {
         }
         tenants = temp;
     }
-}
-class PetRoom extends Room {
-    String petType;
-}
-class SmokingRoom extends Room {
-    boolean smokeRoom = true;
-}
-class RemodeledRoom extends Room {
-    int additionalCharges+=50;
 }
