@@ -61,8 +61,4 @@ public class LandLord {
     public void setPhoneNum(String phoneNum) {
         this.phoneNum = phoneNum;
     }
-
-    public void payExpenses(Property property) {
-        property.setCharges(0);
-    }
 }

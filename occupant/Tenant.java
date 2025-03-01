@@ -45,8 +45,4 @@ public class Tenant {
     public void setLease(Lease lease) {
         this.lease = lease;
     }
-
-    public void payRent() {
-        lease.setBalance(lease.getBalance() - lease.getRoom().getRent());
-    }
 }
