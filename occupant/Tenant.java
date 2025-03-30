@@ -12,6 +12,14 @@ public class Tenant {
         this.name = name;
         this.creditScore = creditScore;
         this.phoneNum = phoneNum;
+        lease = null;
+    }
+
+    public Tenant() {
+        this.name = "";
+        this.creditScore = 0;
+        this.phoneNum = "";
+        lease = null;
     }
 
     public String getName() {

@@ -4,16 +4,27 @@ import occupant.Tenant;
 
 public class Room {
     private String description;
-    private double Rent;
+    private double rent;
     private int roomNumber;
-    private boolean isOccupied;
+    private boolean isAvailable;
     private double additionalCharges;
-    private Tenant[] tenants;
+    private int occupancy;
 
     public Room(String description, double rent, int roomNumber) {
         this.description = description;
-        Rent = rent;
+        this.rent = rent;
         this.roomNumber = roomNumber;
+        this.isAvailable = true;
+        this.additionalCharges = 0;
+        this.occupancy = 0;
+    }
+    public Room() {
+        this.description = "";
+        this.rent = 0;
+        this.roomNumber = 0;
+        this.isAvailable = true;
+        this.additionalCharges = 0;
+        this.occupancy = 0;
     }
 
     public String getDescription() {
@@ -25,11 +36,11 @@ public class Room {
     }
 
     public double getRent() {
-        return Rent;
+        return rent;
     }
 
     public void setRent(double rent) {
-        Rent = rent;
+        this.rent = rent;
     }
 
     public int getRoomNumber() {
@@ -40,12 +51,12 @@ public class Room {
         this.roomNumber = roomNumber;
     }
 
-    public boolean isOccupied() {
-        return isOccupied;
+    public boolean isAvailable() {
+        return isAvailable;
     }
 
-    public void setOccupied(boolean occupied) {
-        isOccupied = occupied;
+    public void setAvailable(boolean available) {
+        isAvailable = available;
     }
 
     public double getAdditionalCharges() {
@@ -56,31 +67,11 @@ public class Room {
         this.additionalCharges = additionalCharges;
     }
 
-    public Tenant[] getTenants() {
-        return tenants;
+    public int getOccupancy() {
+        return occupancy;
     }
 
-    public void setTenants(Tenant[] tenants) {
-        this.tenants = tenants;
-    }
-
-    public void addTenant(Tenant tenant) {
-        Tenant[] temp = new Tenant[tenants.length + 1];
-        for (int i = 0; i < tenants.length; i++) {
-            temp[i] = tenants[i];
-        }
-        temp[tenants.length] = tenant;
-        tenants = temp;
-    }
-
-    public void removeTenant(Tenant tenant) {
-        Tenant[] temp = new Tenant[tenants.length - 1];
-        for (int i = 0, j = 0; i < tenants.length; i++) {
-            if (tenants[i] != tenant) {
-                temp[j] = tenants[i];
-                j++;
-            }
-        }
-        tenants = temp;
+    public void setOccupancy(int occupancy) {
+        this.occupancy = occupancy;
     }
 }

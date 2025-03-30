@@ -1,29 +1,19 @@
 package Building;
 
 public class PetRoom extends Room {
-    private int animalNumber;
-    private String petType;
+    private int petNumber;
 
-    public PetRoom(String description, double rent, int roomNumber, int animalNumber, String petType) {
+    public PetRoom(String description, double rent, int roomNumber, int petNumber) {
         super(description, rent, roomNumber);
-        this.animalNumber = animalNumber;
-        this.petType = petType;
+        this.petNumber = petNumber;
     }
 
-    public int getAnimalNumber() {
-        return animalNumber;
+    public int getPetNumber() {
+        return petNumber;
     }
 
-    public void setAnimalNumber(int animalNumber) {
-        this.animalNumber = animalNumber;
-    }
-
-    public String getPetType() {
-        return petType;
-    }
-
-    public void setPetType(String petType) {
-        this.petType = petType;
+    public void setPetNumber(int petNumber) {
+        this.petNumber = petNumber;
     }
 }
 

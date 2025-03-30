@@ -8,6 +8,18 @@ public class Property {
     public Property(Room[] rooms, String address) {
         this.rooms = rooms;
         this.address = address;
+        charges = 0;
+    }
+
+    public Property(String address) {
+        this.address = address;
+        charges = 0;
+    }
+
+    public Property() {
+        this.address = "";
+        rooms = null;
+        charges = 0;
     }
 
     public Room[] getRooms() {
@@ -40,9 +52,5 @@ public class Property {
             roomList += "Building.Room: " + room.getRoomNumber() + " with the description: " + room.getDescription() + "\n";
         }
         return roomList;
-    }
-
-    public void addCharge(double charge) {
-        charges += charge;
     }
 }
