@@ -16,6 +16,7 @@ public class Lease {
         this.balance = balance;
         this.landLord = landLord;
     }
+
     public Lease() {
         this.room = null;
         this.tenant = null;
@@ -57,7 +58,10 @@ public class Lease {
     }
 
     public void endLease() {
-        room.setAvailable(false);
+        room.setAvailable(true);
+        room.setOccupancy(room.getOccupancy() - 1);
         tenant.setLease(null);
+        setTenant(null);
+        setLandLord(null);
     }
 }

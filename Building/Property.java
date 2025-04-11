@@ -45,12 +45,4 @@ public class Property {
     public void setCharges(double charges) {
         this.charges = charges;
     }
-
-    public String listRooms() {
-        String roomList = "";
-        for (Room room : rooms) {
-            roomList += "Building.Room: " + room.getRoomNumber() + " with the description: " + room.getDescription() + "\n";
-        }
-        return roomList;
-    }
 }
