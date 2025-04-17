@@ -3,21 +3,31 @@ package Building;
 import occupant.Tenant;
 
 public class Room {
-    private String description;
+    private String description, address;
     private double rent;
     private int roomNumber;
     private boolean isAvailable;
     private double additionalCharges;
     private int occupancy;
 
-    public Room(String description, double rent, int roomNumber) {
+    public Room(String description, double rent, int roomNumber, String address) {
         this.description = description;
         this.rent = rent;
         this.roomNumber = roomNumber;
         this.isAvailable = true;
         this.additionalCharges = 0;
         this.occupancy = 0;
+        this.address = address;
     }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     public Room() {
         this.description = "";
         this.rent = 0;
@@ -25,6 +35,7 @@ public class Room {
         this.isAvailable = true;
         this.additionalCharges = 0;
         this.occupancy = 0;
+        this.address = "";
     }
 
     public String getDescription() {
