@@ -20,6 +20,7 @@ public class PropertyManagementGUI extends JFrame {
     private ArrayList<Lease> leases;
     private ArrayList<LandLord> landlords;
     private DefaultListModel<String> roomListModel;
+    private JComboBox<String> addressComboBox; // ADDED: Address selection box for room panel
 
     public PropertyManagementGUI() {
         properties = new ArrayList<>();
@@ -28,14 +29,11 @@ public class PropertyManagementGUI extends JFrame {
         landlords = new ArrayList<>();
 
         setTitle("Property Management System");
-        setSize(800, 600);
+        setSize(700, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Create tabbed pane
         JTabbedPane tabbedPane = new JTabbedPane();
-
-        // Add tabs
         tabbedPane.addTab("Properties", createPropertyPanel());
         tabbedPane.addTab("Rooms", createRoomPanel());
         tabbedPane.addTab("Tenants", createTenantPanel());
@@ -48,12 +46,10 @@ public class PropertyManagementGUI extends JFrame {
     private JPanel createPropertyPanel() {
         JPanel panel = new JPanel(new BorderLayout());
 
-        // Property list
         DefaultListModel<String> propertyListModel = new DefaultListModel<>();
         JList<String> propertyList = new JList<>(propertyListModel);
         JScrollPane propertyScrollPane = new JScrollPane(propertyList);
 
-        // Property input panel
         JPanel inputPanel = new JPanel(new GridLayout(3, 2));
         JTextField addressField = new JTextField(20);
         JButton addButton = new JButton("Add Property");
@@ -64,7 +60,6 @@ public class PropertyManagementGUI extends JFrame {
         inputPanel.add(addButton);
         inputPanel.add(viewRoomsButton);
 
-        // Add action listeners
         addButton.addActionListener(e -> {
             String address = addressField.getText().trim();
             if (!address.isEmpty()) {
@@ -72,6 +67,7 @@ public class PropertyManagementGUI extends JFrame {
                 properties.add(property);
                 propertyListModel.addElement(address);
                 addressField.setText("");
+                updateAddressComboBox(); // Ensure combo box is updated
             }
         });
 
@@ -92,7 +88,6 @@ public class PropertyManagementGUI extends JFrame {
     private JPanel createRoomPanel() {
         JPanel panel = new JPanel(new BorderLayout());
 
-        // Search panel
         JPanel searchPanel = new JPanel(new GridLayout(2, 3));
         JTextField searchField = new JTextField(20);
         JTextField minRentField = new JTextField(10);
@@ -109,19 +104,18 @@ public class PropertyManagementGUI extends JFrame {
         searchPanel.add(new JLabel("Room Type:"));
         searchPanel.add(roomTypeComboSearch);
 
-        // Room list
         roomListModel = new DefaultListModel<>();
         JList<String> roomList = new JList<>(roomListModel);
         JScrollPane roomScrollPane = new JScrollPane(roomList);
 
-        // Room input panel
         JPanel inputPanel = new JPanel(new GridLayout(7, 2));
         JTextField descriptionField = new JTextField(20);
         JTextField rentField = new JTextField(20);
         JTextField roomNumberField = new JTextField(20);
-        JTextField addressField = new JTextField(20);
+        addressComboBox = new JComboBox<>();
+        updateAddressComboBox(); // Fill initial addresses
         JComboBox<String> roomTypeCombo = new JComboBox<>(new String[]{"Standard", "Pet", "Renovated", "Smoking"});
-        JTextField specialField = new JTextField(20); // For pet number or renovation year
+        JTextField specialField = new JTextField(20);
         JButton addButton = new JButton("Add Room");
 
         inputPanel.add(new JLabel("Description:"));
@@ -131,7 +125,7 @@ public class PropertyManagementGUI extends JFrame {
         inputPanel.add(new JLabel("Room Number:"));
         inputPanel.add(roomNumberField);
         inputPanel.add(new JLabel("Address:"));
-        inputPanel.add(addressField);
+        inputPanel.add(addressComboBox);
         inputPanel.add(new JLabel("Room Type:"));
         inputPanel.add(roomTypeCombo);
         inputPanel.add(new JLabel("Special Attribute:"));
@@ -139,10 +133,8 @@ public class PropertyManagementGUI extends JFrame {
         inputPanel.add(new JLabel(""));
         inputPanel.add(addButton);
 
-        // Update room list with all rooms initially
         updateRoomList(null, 0, Double.MAX_VALUE, "All");
 
-        // Search action listener
         searchButton.addActionListener(e -> {
             String searchText = searchField.getText().trim().toLowerCase();
             double minRent = 0;
@@ -167,7 +159,7 @@ public class PropertyManagementGUI extends JFrame {
                 String description = descriptionField.getText().trim();
                 double rent = Double.parseDouble(rentField.getText().trim());
                 int roomNumber = Integer.parseInt(roomNumberField.getText().trim());
-                String address = addressField.getText().trim();
+                String address = (String) addressComboBox.getSelectedItem();
                 String roomType = (String) roomTypeCombo.getSelectedItem();
 
                 Room room;
@@ -188,8 +180,7 @@ public class PropertyManagementGUI extends JFrame {
                         break;
                 }
 
-                // Add to selected property
-                int selectedIndex = properties.size() - 1; // Add to last property for simplicity
+                int selectedIndex = properties.size() - 1;
                 if (selectedIndex >= 0) {
                     Property property = properties.get(selectedIndex);
                     Room[] currentRooms = property.getRooms();
@@ -203,18 +194,15 @@ public class PropertyManagementGUI extends JFrame {
                         newRooms[currentRooms.length] = room;
                     }
                     property.setRooms(newRooms);
-                    // Update room list with current search parameters
                     updateRoomList(searchField.getText().trim().toLowerCase(),
                             minRentField.getText().trim().isEmpty() ? 0 : Double.parseDouble(minRentField.getText().trim()),
                             maxRentField.getText().trim().isEmpty() ? Double.MAX_VALUE : Double.parseDouble(maxRentField.getText().trim()),
                             (String) roomTypeComboSearch.getSelectedItem());
                 }
 
-                // Clear fields
                 descriptionField.setText("");
                 rentField.setText("");
                 roomNumberField.setText("");
-                addressField.setText("");
                 specialField.setText("");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Please enter valid numbers for rent, room number, and special attribute");
@@ -225,6 +213,15 @@ public class PropertyManagementGUI extends JFrame {
         panel.add(roomScrollPane, BorderLayout.CENTER);
         panel.add(inputPanel, BorderLayout.SOUTH);
         return panel;
+    }
+
+    private void updateAddressComboBox() {
+        if (addressComboBox != null) {
+            addressComboBox.removeAllItems();
+            for (Property property : properties) {
+                addressComboBox.addItem(property.getAddress());
+            }
+        }
     }
 
     private void updateRoomList(String searchText, double minRent, double maxRent, String roomType) {
@@ -280,8 +277,19 @@ public class PropertyManagementGUI extends JFrame {
         addButton.addActionListener(e -> {
             try {
                 String name = nameField.getText().trim();
-                int creditScore = Integer.parseInt(creditScoreField.getText().trim());
+                if (phoneField.getText().length() < 10)
+                    throw new NumberFormatException();
                 String phone = phoneField.getText().trim();
+                int creditScore;
+                try {
+                    if (Integer.parseInt(creditScoreField.getText().trim()) >= 300 && Integer.parseInt(creditScoreField.getText().trim()) <= 850)
+                        creditScore = Integer.parseInt(creditScoreField.getText().trim());
+                    else
+                        throw new NumberFormatException();
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Please enter a valid credit score");
+                    return;
+                }
 
                 Tenant tenant = new Tenant(name, creditScore, phone);
                 tenants.add(tenant);
@@ -290,8 +298,8 @@ public class PropertyManagementGUI extends JFrame {
                 nameField.setText("");
                 creditScoreField.setText("");
                 phoneField.setText("");
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Please enter a valid credit score");
+            } catch (Exception exx) {
+                JOptionPane.showMessageDialog(this, "Unexpected error occurred: " + exx.getMessage());
             }
         });
 
