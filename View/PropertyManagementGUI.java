@@ -20,25 +20,35 @@ public class PropertyManagementGUI extends JFrame {
     private ArrayList<Lease> leases;
     private ArrayList<LandLord> landlords;
     private DefaultListModel<String> roomListModel;
-    private JComboBox<String> addressComboBox; // ADDED: Address selection box for room panel
+    private JComboBox<String> addressComboBox;
 
-    public PropertyManagementGUI() {
+    private String userRole;
+
+    public PropertyManagementGUI(String userRole) {
+        this.userRole = userRole;
         properties = new ArrayList<>();
         tenants = new ArrayList<>();
         leases = new ArrayList<>();
         landlords = new ArrayList<>();
 
-        setTitle("Property Management System");
+        setTitle("Property Management System - " + userRole);
         setSize(700, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("Properties", createPropertyPanel());
-        tabbedPane.addTab("Rooms", createRoomPanel());
-        tabbedPane.addTab("Tenants", createTenantPanel());
-        tabbedPane.addTab("Leases", createLeasePanel());
-        tabbedPane.addTab("Landlords", createLandlordPanel());
+
+        if (userRole.equalsIgnoreCase("Landlord")) {
+            tabbedPane.addTab("Properties", createPropertyPanel());
+            tabbedPane.addTab("Rooms", createRoomPanel());
+            tabbedPane.addTab("Tenants", createTenantPanel());
+            tabbedPane.addTab("Leases", createLeasePanel());
+            tabbedPane.addTab("Landlords", createLandlordPanel());
+        } else if (userRole.equalsIgnoreCase("Tenant")) {
+            tabbedPane.addTab("Rooms", createRoomPanel());
+            tabbedPane.addTab("Tenants", createTenantPanel());
+            tabbedPane.addTab("Leases", createLeasePanel());
+        }
 
         add(tabbedPane);
     }
@@ -67,7 +77,7 @@ public class PropertyManagementGUI extends JFrame {
                 properties.add(property);
                 propertyListModel.addElement(address);
                 addressField.setText("");
-                updateAddressComboBox(); // Ensure combo box is updated
+                updateAddressComboBox();
             }
         });
 
@@ -108,30 +118,121 @@ public class PropertyManagementGUI extends JFrame {
         JList<String> roomList = new JList<>(roomListModel);
         JScrollPane roomScrollPane = new JScrollPane(roomList);
 
-        JPanel inputPanel = new JPanel(new GridLayout(7, 2));
-        JTextField descriptionField = new JTextField(20);
-        JTextField rentField = new JTextField(20);
-        JTextField roomNumberField = new JTextField(20);
-        addressComboBox = new JComboBox<>();
-        updateAddressComboBox(); // Fill initial addresses
-        JComboBox<String> roomTypeCombo = new JComboBox<>(new String[]{"Standard", "Pet", "Renovated", "Smoking"});
-        JTextField specialField = new JTextField(20);
-        JButton addButton = new JButton("Add Room");
+        panel.add(searchPanel, BorderLayout.NORTH);
+        panel.add(roomScrollPane, BorderLayout.CENTER);
 
-        inputPanel.add(new JLabel("Description:"));
-        inputPanel.add(descriptionField);
-        inputPanel.add(new JLabel("Rent:"));
-        inputPanel.add(rentField);
-        inputPanel.add(new JLabel("Room Number:"));
-        inputPanel.add(roomNumberField);
-        inputPanel.add(new JLabel("Address:"));
-        inputPanel.add(addressComboBox);
-        inputPanel.add(new JLabel("Room Type:"));
-        inputPanel.add(roomTypeCombo);
-        inputPanel.add(new JLabel("Special Attribute:"));
-        inputPanel.add(specialField);
-        inputPanel.add(new JLabel(""));
-        inputPanel.add(addButton);
+        if (!userRole.equalsIgnoreCase("Tenant")) {
+            JPanel inputPanel = new JPanel(new GridLayout(10, 2));
+            JTextField descriptionField = new JTextField(20);
+            JTextField rentField = new JTextField(20);
+            JTextField roomNumberField = new JTextField(20);
+            addressComboBox = new JComboBox<>();
+            updateAddressComboBox();
+            JComboBox<String> roomTypeCombo = new JComboBox<>(new String[]{"Standard", "Pet", "Renovated", "Smoking"});
+            JTextField additionalChargesField = new JTextField(20);
+            JLabel petNumberLabel = new JLabel("Number of Pets:");
+            JTextField petNumberField = new JTextField(20);
+            JLabel renovationYearLabel = new JLabel("Renovation Year:");
+            JTextField renovationYearField = new JTextField(20);
+            JButton addButton = new JButton("Add Room");
+
+            inputPanel.add(new JLabel("Description:"));
+            inputPanel.add(descriptionField);
+            inputPanel.add(new JLabel("Rent:"));
+            inputPanel.add(rentField);
+            inputPanel.add(new JLabel("Room Number:"));
+            inputPanel.add(roomNumberField);
+            inputPanel.add(new JLabel("Address:"));
+            inputPanel.add(addressComboBox);
+            inputPanel.add(new JLabel("Room Type:"));
+            inputPanel.add(roomTypeCombo);
+            inputPanel.add(new JLabel("Additional Charges:"));
+            inputPanel.add(additionalChargesField);
+            inputPanel.add(petNumberLabel);
+            inputPanel.add(petNumberField);
+            inputPanel.add(renovationYearLabel);
+            inputPanel.add(renovationYearField);
+            inputPanel.add(new JLabel(""));
+            inputPanel.add(addButton);
+
+            petNumberLabel.setVisible(false);
+            petNumberField.setVisible(false);
+            renovationYearLabel.setVisible(false);
+            renovationYearField.setVisible(false);
+
+            roomTypeCombo.addActionListener(e -> {
+                String selectedType = (String) roomTypeCombo.getSelectedItem();
+                petNumberLabel.setVisible("Pet".equals(selectedType));
+                petNumberField.setVisible("Pet".equals(selectedType));
+                renovationYearLabel.setVisible("Renovated".equals(selectedType));
+                renovationYearField.setVisible("Renovated".equals(selectedType));
+            });
+
+            addButton.addActionListener(e -> {
+                try {
+                    String description = descriptionField.getText().trim();
+                    double rent = Double.parseDouble(rentField.getText().trim());
+                    int roomNumber = Integer.parseInt(roomNumberField.getText().trim());
+                    String address = (String) addressComboBox.getSelectedItem();
+                    String roomType = (String) roomTypeCombo.getSelectedItem();
+
+                    double additionalCharges = 0;
+                    if (!additionalChargesField.getText().trim().isEmpty()) {
+                        additionalCharges = Double.parseDouble(additionalChargesField.getText().trim());
+                    }
+                    rent += additionalCharges;
+
+                    Room room;
+                    switch (roomType) {
+                        case "Pet":
+                            int petNumber = Integer.parseInt(petNumberField.getText().trim());
+                            room = new PetRoom(description, rent, roomNumber, petNumber, address);
+                            break;
+                        case "Renovated":
+                            int renovationYear = Integer.parseInt(renovationYearField.getText().trim());
+                            room = new RenovatedRoom(description, rent, roomNumber, renovationYear, address);
+                            break;
+                        case "Smoking":
+                            room = new SmokingRoom(description, rent, roomNumber, address);
+                            break;
+                        default:
+                            room = new Room(description, rent, roomNumber, address);
+                            break;
+                    }
+
+                    int selectedIndex = properties.size() - 1;
+                    if (selectedIndex >= 0) {
+                        Property property = properties.get(selectedIndex);
+                        Room[] currentRooms = property.getRooms();
+                        Room[] newRooms;
+                        if (currentRooms == null) {
+                            newRooms = new Room[1];
+                            newRooms[0] = room;
+                        } else {
+                            newRooms = new Room[currentRooms.length + 1];
+                            System.arraycopy(currentRooms, 0, newRooms, 0, currentRooms.length);
+                            newRooms[currentRooms.length] = room;
+                        }
+                        property.setRooms(newRooms);
+                        updateRoomList(searchField.getText().trim().toLowerCase(),
+                                minRentField.getText().trim().isEmpty() ? 0 : Double.parseDouble(minRentField.getText().trim()),
+                                maxRentField.getText().trim().isEmpty() ? Double.MAX_VALUE : Double.parseDouble(maxRentField.getText().trim()),
+                                (String) roomTypeComboSearch.getSelectedItem());
+                    }
+
+                    descriptionField.setText("");
+                    rentField.setText("");
+                    roomNumberField.setText("");
+                    additionalChargesField.setText("");
+                    petNumberField.setText("");
+                    renovationYearField.setText("");
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Please enter valid numbers.");
+                }
+            });
+
+            panel.add(inputPanel, BorderLayout.SOUTH);
+        }
 
         updateRoomList(null, 0, Double.MAX_VALUE, "All");
 
@@ -154,64 +255,6 @@ public class PropertyManagementGUI extends JFrame {
             updateRoomList(searchText, minRent, maxRent, selectedType);
         });
 
-        addButton.addActionListener(e -> {
-            try {
-                String description = descriptionField.getText().trim();
-                double rent = Double.parseDouble(rentField.getText().trim());
-                int roomNumber = Integer.parseInt(roomNumberField.getText().trim());
-                String address = (String) addressComboBox.getSelectedItem();
-                String roomType = (String) roomTypeCombo.getSelectedItem();
-
-                Room room;
-                switch (roomType) {
-                    case "Pet":
-                        int petNumber = Integer.parseInt(specialField.getText().trim());
-                        room = new PetRoom(description, rent, roomNumber, petNumber, address);
-                        break;
-                    case "Renovated":
-                        int renovationYear = Integer.parseInt(specialField.getText().trim());
-                        room = new RenovatedRoom(description, rent, roomNumber, renovationYear, address);
-                        break;
-                    case "Smoking":
-                        room = new SmokingRoom(description, rent, roomNumber, address);
-                        break;
-                    default:
-                        room = new Room(description, rent, roomNumber, address);
-                        break;
-                }
-
-                int selectedIndex = properties.size() - 1;
-                if (selectedIndex >= 0) {
-                    Property property = properties.get(selectedIndex);
-                    Room[] currentRooms = property.getRooms();
-                    Room[] newRooms;
-                    if (currentRooms == null) {
-                        newRooms = new Room[1];
-                        newRooms[0] = room;
-                    } else {
-                        newRooms = new Room[currentRooms.length + 1];
-                        System.arraycopy(currentRooms, 0, newRooms, 0, currentRooms.length);
-                        newRooms[currentRooms.length] = room;
-                    }
-                    property.setRooms(newRooms);
-                    updateRoomList(searchField.getText().trim().toLowerCase(),
-                            minRentField.getText().trim().isEmpty() ? 0 : Double.parseDouble(minRentField.getText().trim()),
-                            maxRentField.getText().trim().isEmpty() ? Double.MAX_VALUE : Double.parseDouble(maxRentField.getText().trim()),
-                            (String) roomTypeComboSearch.getSelectedItem());
-                }
-
-                descriptionField.setText("");
-                rentField.setText("");
-                roomNumberField.setText("");
-                specialField.setText("");
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Please enter valid numbers for rent, room number, and special attribute");
-            }
-        });
-
-        panel.add(searchPanel, BorderLayout.NORTH);
-        panel.add(roomScrollPane, BorderLayout.CENTER);
-        panel.add(inputPanel, BorderLayout.SOUTH);
         return panel;
     }
 
@@ -451,11 +494,5 @@ public class PropertyManagementGUI extends JFrame {
             }
         }
         return allRooms;
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new PropertyManagementGUI().setVisible(true);
-        });
     }
 }
