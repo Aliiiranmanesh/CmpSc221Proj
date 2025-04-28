@@ -6,6 +6,7 @@ import Building.PetRoom;
 import Building.RenovatedRoom;
 import Building.SmokingRoom;
 import documents.Lease;
+import documents.databaseManager;
 import Owner.LandLord;
 import occupant.Tenant;
 
@@ -13,6 +14,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class PropertyManagementGUI extends JFrame {
     private ArrayList<Property> properties;
@@ -20,6 +26,7 @@ public class PropertyManagementGUI extends JFrame {
     private ArrayList<Lease> leases;
     private ArrayList<LandLord> landlords;
     private DefaultListModel<String> roomListModel;
+    private databaseManager database;
 
     public PropertyManagementGUI() {
         properties = new ArrayList<>();
@@ -318,6 +325,7 @@ public class PropertyManagementGUI extends JFrame {
         JComboBox<String> landlordCombo = new JComboBox<>();
         JButton addButton = new JButton("Create Lease");
         JButton endButton = new JButton("End Lease");
+        JButton updateInformationButton = new JButton("Update Information");
 
         inputPanel.add(new JLabel("Room:"));
         inputPanel.add(roomCombo);
@@ -329,6 +337,7 @@ public class PropertyManagementGUI extends JFrame {
         inputPanel.add(landlordCombo);
         inputPanel.add(addButton);
         inputPanel.add(endButton);
+        inputPanel.add(updateInformationButton);
 
         // Update combos when data changes
         updateComboBoxes(roomCombo, tenantCombo, landlordCombo);
@@ -360,6 +369,7 @@ public class PropertyManagementGUI extends JFrame {
                         JOptionPane.showMessageDialog(this, "Selected room is not available");
                     }
                 }
+                database.insertData(leases);
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Please enter a valid balance");
             }
@@ -376,6 +386,9 @@ public class PropertyManagementGUI extends JFrame {
                 // Update room list after ending lease
                 updateRoomList("", 0, Double.MAX_VALUE, "All");
             }
+        });
+        updateInformationButton.addActionListener(e-> {
+            updateComboBoxes(roomCombo, tenantCombo, landlordCombo);
         });
 
         panel.add(leaseScrollPane, BorderLayout.CENTER);
