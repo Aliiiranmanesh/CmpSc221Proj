@@ -26,36 +26,89 @@ public class databaseManager {
     private void createTables() throws SQLException {
         Statement stmt = connection.createStatement();
 
-        try { stmt.executeUpdate("CREATE TABLE PROPERTIES (ADDRESS VARCHAR(255) PRIMARY KEY)"); } catch (SQLException e) {}
-        try { stmt.executeUpdate("CREATE TABLE TENANTS (NAME VARCHAR(255), CREDIT_SCORE INT, PHONE VARCHAR(20))"); } catch (SQLException e) {}
-        try { stmt.executeUpdate("CREATE TABLE LANDLORDS (NAME VARCHAR(255))"); } catch (SQLException e) {}
+        try {
+            stmt.executeUpdate("CREATE TABLE PROPERTIES (ADDRESS VARCHAR(255) PRIMARY KEY)");
+        } catch (SQLException e) {
+        }
+        try {
+            stmt.executeUpdate("CREATE TABLE TENANTS (NAME VARCHAR(255), CREDIT_SCORE INT, PHONE VARCHAR(20))");
+        } catch (SQLException e) {
+        }
+        try {
+            stmt.executeUpdate("CREATE TABLE LANDLORDS (NAME VARCHAR(255))");
+        } catch (SQLException e) {
+        }
         try {
             stmt.executeUpdate("CREATE TABLE ROOMS (DESCRIPTION VARCHAR(255), RENT DOUBLE, ROOM_NUMBER INT, TYPE VARCHAR(20), SPECIAL INT, ADDRESS VARCHAR(255), AVAILABLE BOOLEAN, OCCUPANCY INT)");
-        } catch (SQLException e) {}
+        } catch (SQLException e) {
+            e.getMessage();
+        }
         try {
             stmt.executeUpdate("CREATE TABLE LEASES (ROOM_NUMBER INT, ROOM_ADDRESS VARCHAR(255), TENANT_NAME VARCHAR(255), LANDLORD_NAME VARCHAR(255), BALANCE DOUBLE, ACTIVE BOOLEAN)");
-        } catch (SQLException e) {}
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        try {
+            stmt.executeUpdate("CREATE TABLE USERS (\n" +
+                    "    USERNAME VARCHAR(255) PRIMARY KEY,\n" +
+                    "    PASSWORD VARCHAR(255),\n" +
+                    "    ROLE VARCHAR(20)\n" +
+                    ")");
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public void insertProperty(Property p) {
         try (PreparedStatement ps = connection.prepareStatement("INSERT INTO PROPERTIES (ADDRESS) VALUES (?)")) {
             ps.setString(1, p.getAddress());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void deleteProperty(Property p) {
-        try (PreparedStatement ps = connection.prepareStatement("DELETE FROM PROPERTIES WHERE ADDRESS=?")) {
-            ps.setString(1, p.getAddress());
-            ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        try {
+            connection.setAutoCommit(false);
+
+            // Delete rooms related to the property first
+            try (PreparedStatement psRooms = connection.prepareStatement("DELETE FROM ROOMS WHERE ADDRESS=?")) {
+                psRooms.setString(1, p.getAddress());
+                psRooms.executeUpdate();
+            }
+
+            // Then delete the property itself
+            try (PreparedStatement psProp = connection.prepareStatement("DELETE FROM PROPERTIES WHERE ADDRESS=?")) {
+                psProp.setString(1, p.getAddress());
+                psProp.executeUpdate();
+            }
+
+            connection.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
     }
+
 
     public List<Property> getAllProperties() {
         List<Property> list = new ArrayList<>();
         try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery("SELECT ADDRESS FROM PROPERTIES")) {
             while (rs.next()) list.add(new Property(rs.getString("ADDRESS")));
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return list;
     }
 
@@ -65,21 +118,28 @@ public class databaseManager {
             ps.setInt(2, t.getCreditScore());
             ps.setString(3, t.getPhoneNum());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void deleteTenant(Tenant t) {
         try (PreparedStatement ps = connection.prepareStatement("DELETE FROM TENANTS WHERE NAME=?")) {
             ps.setString(1, t.getName());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public List<Tenant> getAllTenants() {
         List<Tenant> list = new ArrayList<>();
         try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery("SELECT NAME, CREDIT_SCORE, PHONE FROM TENANTS")) {
-            while (rs.next()) list.add(new Tenant(rs.getString("NAME"), rs.getInt("CREDIT_SCORE"), rs.getString("PHONE")));
-        } catch (SQLException e) { e.printStackTrace(); }
+            while (rs.next())
+                list.add(new Tenant(rs.getString("NAME"), rs.getInt("CREDIT_SCORE"), rs.getString("PHONE")));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return list;
     }
 
@@ -87,21 +147,27 @@ public class databaseManager {
         try (PreparedStatement ps = connection.prepareStatement("INSERT INTO LANDLORDS (NAME) VALUES (?)")) {
             ps.setString(1, l.getName());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void deleteLandlord(LandLord l) {
         try (PreparedStatement ps = connection.prepareStatement("DELETE FROM LANDLORDS WHERE NAME=?")) {
             ps.setString(1, l.getName());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public List<LandLord> getAllLandlords() {
         List<LandLord> list = new ArrayList<>();
         try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery("SELECT NAME FROM LANDLORDS")) {
             while (rs.next()) list.add(new LandLord(rs.getString("NAME")));
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return list;
     }
 
@@ -118,8 +184,23 @@ public class databaseManager {
             ps.setBoolean(7, r.isAvailable());
             ps.setInt(8, r.getOccupancy());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
+
+    public void updateRoomAvailability(Room room) {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "UPDATE ROOMS SET AVAILABLE=? WHERE ROOM_NUMBER=? AND ADDRESS=?")) {
+            ps.setBoolean(1, room.isAvailable());
+            ps.setInt(2, room.getRoomNumber());
+            ps.setString(3, room.getAddress());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public List<Room> getAllRooms() {
         List<Room> list = new ArrayList<>();
@@ -140,7 +221,9 @@ public class databaseManager {
                 r.setOccupancy(rs.getInt("OCCUPANCY"));
                 list.add(r);
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return list;
     }
 
@@ -157,17 +240,45 @@ public class databaseManager {
                 ps.addBatch();
             }
             ps.executeBatch();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void updateLeaseActive(Lease l) {
-        try (PreparedStatement ps = connection.prepareStatement("UPDATE LEASES SET ACTIVE=? WHERE ROOM_NUMBER=? AND TENANT_NAME=?")) {
+        if (l == null || l.getTenant() == null || l.getRoom() == null) {
+            System.err.println("Lease or its components are null.");
+            return;
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(
+                "UPDATE LEASES SET ACTIVE=? WHERE ROOM_NUMBER=? AND TENANT_NAME=?")) {
             ps.setBoolean(1, false);
             ps.setInt(2, l.getRoom().getRoomNumber());
             ps.setString(3, l.getTenant().getName());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
+
+    public void deleteLease(Lease l) {
+        if (l == null || l.getTenant() == null || l.getRoom() == null) {
+            System.err.println("Lease or its components are null.");
+            return;
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(
+                "DELETE FROM LEASES WHERE ROOM_NUMBER=? AND ROOM_ADDRESS=? AND TENANT_NAME=?")) {
+            ps.setInt(1, l.getRoom().getRoomNumber());
+            ps.setString(2, l.getRoom().getAddress());
+            ps.setString(3, l.getTenant().getName());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public List<Lease> getAllLeases(List<Room> rooms, List<Tenant> tenants, List<LandLord> landlords) {
         List<Lease> leases = new ArrayList<>();
@@ -200,7 +311,36 @@ public class databaseManager {
                     leases.add(lease);
                 }
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return leases;
+    }
+
+    public boolean validateUser(String username, String password, String role) {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT * FROM USERS WHERE USERNAME=? AND PASSWORD=? AND ROLE=?")) {
+            ps.setString(1, username);
+            ps.setString(2, password);
+            ps.setString(3, role);
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean registerUser(String username, String password, String role) {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "INSERT INTO USERS (USERNAME, PASSWORD, ROLE) VALUES (?, ?, ?)")) {
+            ps.setString(1, username);
+            ps.setString(2, password);
+            ps.setString(3, role);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            return false; // e.g., duplicate username
+        }
     }
 }

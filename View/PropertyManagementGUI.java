@@ -1,8 +1,3 @@
-
-// View/PropertyManagementGUI.java
-// FULL IMPLEMENTATION with reorganized layout, full CRUD, and dynamic updates
-// Please make sure related model classes (Property, Room, Tenant, etc.) are also updated accordingly.
-
 package View;
 
 import Building.*;
@@ -14,46 +9,368 @@ import occupant.Tenant;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.util.*;
 import java.awt.event.*;
 import java.util.List;
-import java.util.*;
 
 public class PropertyManagementGUI extends JFrame {
+
+    private final databaseManager database = new databaseManager();
     private List<Property> properties;
     private List<Tenant> tenants;
     private List<LandLord> landlords;
     private List<Lease> leases;
 
-    private databaseManager database;
+    private final boolean isLandlord;
 
-    private DefaultListModel<String> propertyListModel;
-    private DefaultListModel<String> tenantListModel;
-    private DefaultListModel<String> landlordListModel;
-    private DefaultListModel<String> leaseListModel;
-    private DefaultListModel<String> roomListModel;
+    private DefaultListModel<String>
+            propertyListModel, tenantListModel,
+            landlordListModel, leaseListModel, roomListModel;
 
-    private JList<String> propertyList;
-    private JComboBox<String> addrCombo, typeC, roomCombo, tenantCombo, landlordCombo;
-    private JTextField specF, descF, rentF, numF;
+    private JComboBox<String> addrCombo, typeC;
+    private JTextField descF, rentF, numF, specF;
 
-    public PropertyManagementGUI() {
-        database = new databaseManager();
+    public PropertyManagementGUI(String role) {
+        this.isLandlord = role.equalsIgnoreCase("Landlord");
         reloadData();
 
-        setTitle("Property Management System");
+        setTitle("Property Management System  –  " + role);
         setSize(950, 700);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Properties", createPropertyPanel());
-        tabs.addTab("Rooms", createRoomPanel());
-        tabs.addTab("Tenants", createTenantPanel());
-        tabs.addTab("Leases", createLeasePanel());
-        tabs.addTab("Landlords", createLandlordPanel());
-
+        if (isLandlord) {
+            tabs.addTab("Properties", createPropertyPanel());
+            tabs.addTab("Rooms", createRoomPanel(true));   // add+search
+            tabs.addTab("Tenants", createTenantPanel());     // full panel
+            tabs.addTab("Leases", createLeasePanel());
+            tabs.addTab("Landlords", createLandlordPanel());
+        } else {                                   // TENANT
+            tabs.addTab("Rooms", createRoomPanel(false));  // search-only
+            tabs.addTab("Tenants", createTenantPanel());     // full tenant tab
+        }
         add(tabs);
         refreshUI();
+    }
+
+    public PropertyManagementGUI() {
+        this("Landlord");
+    }
+
+    private JPanel createPropertyPanel() {
+        JPanel p = new JPanel(new BorderLayout());
+        propertyListModel = new DefaultListModel<>();
+        JList<String> list = new JList<>(propertyListModel);
+        p.add(new JScrollPane(list), BorderLayout.CENTER);
+
+        JPanel in = new JPanel();
+        in.setBorder(new TitledBorder("Add / Delete Property"));
+        JTextField addr = new JTextField(20);
+        JButton add = new JButton("Add"), del = new JButton("Delete");
+        in.add(new JLabel("Address:"));
+        in.add(addr);
+        in.add(add);
+        in.add(del);
+        p.add(in, BorderLayout.SOUTH);
+
+        add.addActionListener(e -> {
+            if (!addr.getText().trim().isEmpty()) {
+                database.insertProperty(new Property(addr.getText().trim()));
+                reloadData();
+                refreshUI();
+                addr.setText("");
+            }
+        });
+        del.addActionListener(e -> {
+            int sel = list.getSelectedIndex();
+            if (sel >= 0) {
+                database.deleteProperty(properties.get(sel));
+                reloadData();
+                refreshUI();
+            }
+        });
+        return p;
+    }
+
+    private JPanel createRoomPanel(boolean showAddForm) {
+        JPanel panel = new JPanel(new BorderLayout());
+        roomListModel = new DefaultListModel<>();
+        JList<String> roomList = new JList<>(roomListModel);
+        panel.add(new JScrollPane(roomList), BorderLayout.CENTER);
+
+        // search UI (BoxLayout rows)
+        JPanel wrap = new JPanel();
+        wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
+        wrap.setBorder(new TitledBorder("Search Rooms"));
+
+        JTextField desc = new JTextField(12), num = new JTextField(5),
+                min = new JTextField(5), max = new JTextField(5);
+        JComboBox<String> type = new JComboBox<>(new String[]{
+                "All", "Standard", "PetRoom", "RenovatedRoom", "SmokingRoom"});
+        JCheckBox avail = new JCheckBox("Available Only");
+        JButton search = new JButton("Search"), reset = new JButton("Reset");
+
+        JPanel r1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        r1.add(new JLabel("Description:"));
+        r1.add(desc);
+        r1.add(new JLabel("Room #:"));
+        r1.add(num);
+
+        JPanel r2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        r2.add(new JLabel("Rent Min:"));
+        r2.add(min);
+        r2.add(new JLabel("Rent Max:"));
+        r2.add(max);
+
+        JPanel r3 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        r3.add(new JLabel("Type:"));
+        r3.add(type);
+        r3.add(avail);
+        r3.add(search);
+        r3.add(reset);
+
+        wrap.add(r1);
+        wrap.add(r2);
+        wrap.add(r3);
+        panel.add(wrap, BorderLayout.NORTH);
+
+        search.addActionListener(e -> applyRoomFilter(desc, num, min, max, type, avail));
+        reset.addActionListener(e -> {
+            desc.setText("");
+            num.setText("");
+            min.setText("");
+            max.setText("");
+            type.setSelectedIndex(0);
+            avail.setSelected(false);
+            refreshUI();
+        });
+
+        if (showAddForm) {
+            JPanel form = new JPanel(new GridLayout(0, 2));
+            form.setBorder(new TitledBorder("Add Room"));
+
+            descF = new JTextField();
+            rentF = new JTextField();
+            numF = new JTextField();
+            specF = new JTextField();
+            addrCombo = new JComboBox<>();
+            typeC = new JComboBox<>(new String[]{"Standard", "Pet", "Renovated", "Smoking"});
+
+            form.add(new JLabel("Description:"));
+            form.add(descF);
+            form.add(new JLabel("Rent:"));
+            form.add(rentF);
+            form.add(new JLabel("Room #:"));
+            form.add(numF);
+            form.add(new JLabel("Property:"));
+            form.add(addrCombo);
+            form.add(new JLabel("Type:"));
+            form.add(typeC);
+            JLabel specL = new JLabel("Special:");
+            form.add(specL);
+            form.add(specF);
+            specF.setVisible(false);
+            specL.setVisible(false);
+
+            typeC.addActionListener(e -> {
+                String s = (String) typeC.getSelectedItem();
+                boolean show = s.equals("Pet") || s.equals("Renovated");
+                specF.setVisible(show);
+                specL.setVisible(show);
+                specL.setText(s.equals("Pet") ? "Pet #:" : "Year:");
+            });
+
+            JButton add = new JButton("Add");
+            add.addActionListener(e -> addRoom());
+            form.add(add);
+            panel.add(form, BorderLayout.SOUTH);
+        }
+        return panel;
+    }
+
+    private void applyRoomFilter(JTextField desc, JTextField num,
+                                 JTextField min, JTextField max,
+                                 JComboBox<String> type, JCheckBox avail) {
+        roomListModel.clear();
+        for (Room r : getAllRooms()) {
+            boolean ok = true;
+            if (!desc.getText().isBlank() &&
+                    !r.getDescription().toLowerCase().contains(desc.getText().toLowerCase())) ok = false;
+            if (!num.getText().isBlank() &&
+                    r.getRoomNumber() != Integer.parseInt(num.getText())) ok = false;
+            if (!min.getText().isBlank() &&
+                    r.getRent() < Double.parseDouble(min.getText())) ok = false;
+            if (!max.getText().isBlank() &&
+                    r.getRent() > Double.parseDouble(max.getText())) ok = false;
+            if (!type.getSelectedItem().equals("All") &&
+                    !r.getClass().getSimpleName().equals(type.getSelectedItem())) ok = false;
+            if (avail.isSelected() && !r.isAvailable()) ok = false;
+
+            if (ok) roomListModel.addElement(roomString(r));
+        }
+    }
+
+    private void addRoom() {
+        try {
+            String addr = (String) addrCombo.getSelectedItem();
+            double rent = Double.parseDouble(rentF.getText());
+            int no = Integer.parseInt(numF.getText());
+            String d = descF.getText().trim();
+            String t = (String) typeC.getSelectedItem();
+            Room room = switch (t) {
+                case "Pet" -> new PetRoom(d, rent, no, Integer.parseInt(specF.getText()), addr);
+                case "Renovated" -> new RenovatedRoom(d, rent, no, Integer.parseInt(specF.getText()), addr);
+                case "Smoking" -> new SmokingRoom(d, rent, no, addr);
+                default -> new Room(d, rent, no, addr);
+            };
+            database.insertRoom(room);
+            reloadData();
+            refreshUI();
+            descF.setText("");
+            rentF.setText("");
+            numF.setText("");
+            specF.setText("");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Bad data");
+        }
+    }
+
+    private JPanel createTenantPanel() {
+        JPanel p = new JPanel(new BorderLayout());
+        tenantListModel = new DefaultListModel<>();
+        JList<String> list = new JList<>(tenantListModel);
+        p.add(new JScrollPane(list), BorderLayout.CENTER);
+
+        JPanel crud = new JPanel();
+        crud.setBorder(new TitledBorder("Add / Delete Tenant"));
+        JTextField name = new JTextField(10), credit = new JTextField(4), phone = new JTextField(10);
+        JButton add = new JButton("Add"), del = new JButton("Delete");
+        crud.add(new JLabel("Name:"));
+        crud.add(name);
+        crud.add(new JLabel("Credit:"));
+        crud.add(credit);
+        crud.add(new JLabel("Phone:"));
+        crud.add(phone);
+        crud.add(add);
+        crud.add(del);
+        p.add(crud, BorderLayout.SOUTH);
+
+        add.addActionListener(e -> {
+            try {
+                database.insertTenant(new Tenant(name.getText(),
+                        Integer.parseInt(credit.getText()),
+                        phone.getText()));
+                reloadData();
+                refreshUI();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Bad data");
+            }
+        });
+        del.addActionListener(e -> {
+            int sel = list.getSelectedIndex();
+            if (sel >= 0) {
+                database.deleteTenant(tenants.get(sel));
+                reloadData();
+                refreshUI();
+            }
+        });
+        return p;
+    }
+
+    private JPanel createLandlordPanel() {
+        JPanel p = new JPanel(new BorderLayout());
+        landlordListModel = new DefaultListModel<>();
+        JList<String> list = new JList<>(landlordListModel);
+        p.add(new JScrollPane(list), BorderLayout.CENTER);
+        JPanel in = new JPanel();
+        in.setBorder(new TitledBorder("Add / Delete Landlord"));
+        JTextField name = new JTextField(10);
+        JButton add = new JButton("Add"), del = new JButton("Delete");
+        in.add(new JLabel("Name:"));
+        in.add(name);
+        in.add(add);
+        in.add(del);
+        p.add(in, BorderLayout.SOUTH);
+        add.addActionListener(e -> {
+            database.insertLandlord(new LandLord(name.getText()));
+            reloadData();
+            refreshUI();
+        });
+        del.addActionListener(e -> {
+            int sel = list.getSelectedIndex();
+            if (sel >= 0) {
+                database.deleteLandlord(landlords.get(sel));
+                reloadData();
+                refreshUI();
+            }
+        });
+        return p;
+    }
+
+    private JPanel createLeasePanel() {
+        JPanel p = new JPanel(new BorderLayout());
+        leaseListModel = new DefaultListModel<>();
+        JList<String> list = new JList<>(leaseListModel);
+        p.add(new JScrollPane(list), BorderLayout.CENTER);
+
+        JComboBox<String> roomC = new JComboBox<>(), tenantC = new JComboBox<>(), landC = new JComboBox<>();
+        JTextField bal = new JTextField(5);
+        JButton add = new JButton("Create"), end = new JButton("End Lease");
+
+        JPanel in = new JPanel();
+        in.setBorder(new TitledBorder("Create / End Lease"));
+        in.add(new JLabel("Room:"));
+        in.add(roomC);
+        in.add(new JLabel("Tenant:"));
+        in.add(tenantC);
+        in.add(new JLabel("Landlord:"));
+        in.add(landC);
+        in.add(new JLabel("Balance:"));
+        in.add(bal);
+        in.add(add);
+        in.add(end);
+        p.add(in, BorderLayout.SOUTH);
+
+        add.addActionListener(e -> {
+            try {
+                Room r = getAllRooms().get(roomC.getSelectedIndex());
+                Tenant t = tenants.get(tenantC.getSelectedIndex());
+                LandLord l = landlords.get(landC.getSelectedIndex());
+                Lease ls = new Lease(r, t, Double.parseDouble(bal.getText()), l);
+                database.insertData(List.of(ls));
+                r.setAvailable(false);
+                database.updateRoomAvailability(r);
+                reloadData();
+                refreshUI();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Bad data");
+            }
+        });
+        end.addActionListener(e -> {
+            int sel = list.getSelectedIndex();
+            if (sel >= 0) {
+                Lease ls = leases.get(sel);
+                Room r = ls.getRoom();
+                database.deleteLease(ls);
+                r.setAvailable(true);
+                database.updateRoomAvailability(r);
+                leases.remove(sel);
+                refreshUI();
+            }
+        });
+
+        Runnable updateCombos = () -> {
+            roomC.removeAllItems();
+            getAllRooms().stream().filter(Room::isAvailable)
+                    .forEach(r -> roomC.addItem(roomString(r)));
+            tenantC.removeAllItems();
+            tenants.forEach(t -> tenantC.addItem(t.getName()));
+            landC.removeAllItems();
+            landlords.forEach(l -> landC.addItem(l.getName()));
+        };
+        updateCombos.run();
+        return p;
     }
 
     private void reloadData() {
@@ -61,263 +378,58 @@ public class PropertyManagementGUI extends JFrame {
         tenants = database.getAllTenants();
         landlords = database.getAllLandlords();
         List<Room> rooms = database.getAllRooms();
+
+        // attach rooms to properties
+        for (Property p : properties) p.setRooms(null);
         for (Room r : rooms) {
             properties.stream()
-                    .filter(p -> p.getAddress().equals(r.getAddress()))
+                    .filter(pr -> pr.getAddress().equals(r.getAddress()))
                     .findFirst()
-                    .ifPresent(p -> p.setRooms(
-                            p.getRooms() == null ? new Room[]{r} : appendRoom(p.getRooms(), r)
-                    ));
+                    .ifPresent(pr -> pr.setRooms(
+                            pr.getRooms() == null ? new Room[]{r} : append(pr.getRooms(), r)));
         }
         leases = database.getAllLeases(rooms, tenants, landlords);
     }
 
-    private JPanel createPropertyPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-
-        propertyListModel = new DefaultListModel<>();
-        propertyList = new JList<>(propertyListModel);
-        panel.add(new JScrollPane(propertyList), BorderLayout.CENTER);
-
-        JPanel inputPanel = new JPanel();
-        inputPanel.setBorder(new TitledBorder("Add Property"));
-        inputPanel.add(new JLabel("Address:"));
-        JTextField addressField = new JTextField(20);
-        inputPanel.add(addressField);
-
-        JButton addBtn = new JButton("Add");
-        addBtn.addActionListener(e -> {
-            String addr = addressField.getText().trim();
-            if (!addr.isEmpty()) {
-                Property p = new Property(addr);
-                database.insertProperty(p);
-                reloadData();
-                refreshUI();
-                addressField.setText("");
-            }
-        });
-
-        JButton deleteBtn = new JButton("Delete");
-        deleteBtn.addActionListener(e -> {
-            int sel = propertyList.getSelectedIndex();
-            if (sel >= 0) {
-                Property p = properties.get(sel);
-                database.deleteProperty(p);
-                reloadData();
-                refreshUI();
-            }
-        });
-
-        inputPanel.add(addBtn);
-        inputPanel.add(deleteBtn);
-
-        panel.add(inputPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel createRoomPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        roomListModel = new DefaultListModel<>();
-        JList<String> roomList = new JList<>(roomListModel);
-        panel.add(new JScrollPane(roomList), BorderLayout.CENTER);
-
-        JPanel form = new JPanel(new GridLayout(0, 2));
-        form.setBorder(new TitledBorder("Add Room"));
-
-        descF = new JTextField(); rentF = new JTextField(); numF = new JTextField(); specF = new JTextField();
-        addrCombo = new JComboBox<>(); typeC = new JComboBox<>(new String[]{"Standard", "Pet", "Renovated", "Smoking"});
-
-        form.add(new JLabel("Description:")); form.add(descF);
-        form.add(new JLabel("Rent:")); form.add(rentF);
-        form.add(new JLabel("Room #:")); form.add(numF);
-        form.add(new JLabel("Property:")); form.add(addrCombo);
-        form.add(new JLabel("Type:")); form.add(typeC);
-        JLabel specL = new JLabel("Special:");
-        form.add(specL); form.add(specF);
-        specF.setVisible(false); specL.setVisible(false);
-
-        typeC.addActionListener(e -> {
-            String sel = (String) typeC.getSelectedItem();
-            boolean show = sel.equals("Pet") || sel.equals("Renovated");
-            specF.setVisible(show);
-            specL.setVisible(show);
-            specL.setText(sel.equals("Pet") ? "Pet #:" : "Year:");
-        });
-
-        JButton addBtn = new JButton("Add");
-        addBtn.addActionListener(e -> {
-            try {
-                Room room;
-                String addr = (String) addrCombo.getSelectedItem();
-                double rent = Double.parseDouble(rentF.getText());
-                int roomNo = Integer.parseInt(numF.getText());
-                String desc = descF.getText().trim();
-                String type = (String) typeC.getSelectedItem();
-                switch (type) {
-                    case "Pet":
-                        room = new PetRoom(desc, rent, roomNo, Integer.parseInt(specF.getText()), addr); break;
-                    case "Renovated":
-                        room = new RenovatedRoom(desc, rent, roomNo, Integer.parseInt(specF.getText()), addr); break;
-                    case "Smoking":
-                        room = new SmokingRoom(desc, rent, roomNo, addr); break;
-                    default:
-                        room = new Room(desc, rent, roomNo, addr);
-                }
-                database.insertRoom(room);
-                reloadData();
-                refreshUI();
-                descF.setText(""); rentF.setText(""); numF.setText(""); specF.setText("");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
-            }
-        });
-
-        form.add(addBtn);
-        panel.add(form, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel createTenantPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        tenantListModel = new DefaultListModel<>();
-        JList<String> list = new JList<>(tenantListModel);
-        panel.add(new JScrollPane(list), BorderLayout.CENTER);
-
-        JPanel input = new JPanel();
-        input.setBorder(new TitledBorder("Add Tenant"));
-
-        JTextField name = new JTextField(10), credit = new JTextField(5), phone = new JTextField(10);
-        input.add(new JLabel("Name:")); input.add(name);
-        input.add(new JLabel("Credit:")); input.add(credit);
-        input.add(new JLabel("Phone:")); input.add(phone);
-
-        JButton add = new JButton("Add");
-        JButton del = new JButton("Delete");
-
-        add.addActionListener(e -> {
-            Tenant t = new Tenant(name.getText(), Integer.parseInt(credit.getText()), phone.getText());
-            database.insertTenant(t); reloadData(); refreshUI();
-        });
-
-        del.addActionListener(e -> {
-            int sel = list.getSelectedIndex();
-            if (sel >= 0) {
-                database.deleteTenant(tenants.get(sel));
-                reloadData(); refreshUI();
-            }
-        });
-
-        input.add(add); input.add(del);
-        panel.add(input, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel createLandlordPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        landlordListModel = new DefaultListModel<>();
-        JList<String> list = new JList<>(landlordListModel);
-        panel.add(new JScrollPane(list), BorderLayout.CENTER);
-
-        JPanel input = new JPanel();
-        input.setBorder(new TitledBorder("Add Landlord"));
-        JTextField name = new JTextField(10); input.add(new JLabel("Name:")); input.add(name);
-
-        JButton add = new JButton("Add"), del = new JButton("Delete");
-
-        add.addActionListener(e -> {
-            database.insertLandlord(new LandLord(name.getText()));
-            reloadData(); refreshUI();
-        });
-
-        del.addActionListener(e -> {
-            int sel = list.getSelectedIndex();
-            if (sel >= 0) {
-                database.deleteLandlord(landlords.get(sel));
-                reloadData(); refreshUI();
-            }
-        });
-
-        input.add(add); input.add(del);
-        panel.add(input, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel createLeasePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        leaseListModel = new DefaultListModel<>();
-        JList<String> list = new JList<>(leaseListModel);
-        panel.add(new JScrollPane(list), BorderLayout.CENTER);
-
-        JPanel input = new JPanel();
-        input.setBorder(new TitledBorder("Create Lease"));
-
-        roomCombo = new JComboBox<>();
-        tenantCombo = new JComboBox<>();
-        landlordCombo = new JComboBox<>();
-        JTextField balance = new JTextField(5);
-
-        input.add(new JLabel("Room:")); input.add(roomCombo);
-        input.add(new JLabel("Tenant:")); input.add(tenantCombo);
-        input.add(new JLabel("Landlord:")); input.add(landlordCombo);
-        input.add(new JLabel("Balance:")); input.add(balance);
-
-        JButton add = new JButton("Create"), end = new JButton("End Lease");
-
-        add.addActionListener(e -> {
-            try {
-                Room room = getAllRooms().get(roomCombo.getSelectedIndex());
-                Tenant t = tenants.get(tenantCombo.getSelectedIndex());
-                LandLord l = landlords.get(landlordCombo.getSelectedIndex());
-                Lease lease = new Lease(room, t, Double.parseDouble(balance.getText()), l);
-                database.insertData(List.of(lease));
-                reloadData(); refreshUI();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error creating lease.");
-            }
-        });
-
-        end.addActionListener(e -> {
-            int sel = list.getSelectedIndex();
-            if (sel >= 0) {
-                Lease lease = leases.get(sel);
-                lease.endLease();
-                database.updateLeaseActive(lease);
-                leases.remove(sel);
-                refreshUI();
-            }
-        });
-
-        input.add(add); input.add(end);
-        panel.add(input, BorderLayout.SOUTH);
-        return panel;
-    }
-
     private void refreshUI() {
-        propertyListModel.clear(); properties.forEach(p -> propertyListModel.addElement(p.getAddress()));
-        tenantListModel.clear(); tenants.forEach(t -> tenantListModel.addElement(t.getName()));
-        landlordListModel.clear(); landlords.forEach(l -> landlordListModel.addElement(l.getName()));
-        leaseListModel.clear(); leases.forEach(l -> leaseListModel.addElement("Lease: Room " + l.getRoom().getRoomNumber() + " - " + l.getTenant().getName()));
-        roomListModel.clear(); getAllRooms().forEach(r -> roomListModel.addElement("Room " + r.getRoomNumber() + " - " + r.getDescription()));
-        updateComboBoxes();
-    }
-
-    private void updateComboBoxes() {
-        addrCombo.removeAllItems(); properties.forEach(p -> addrCombo.addItem(p.getAddress()));
-        roomCombo.removeAllItems(); getAllRooms().stream().filter(Room::isAvailable).forEach(r -> roomCombo.addItem(r.getDescription()));
-        tenantCombo.removeAllItems(); tenants.forEach(t -> tenantCombo.addItem(t.getName()));
-        landlordCombo.removeAllItems(); landlords.forEach(l -> landlordCombo.addItem(l.getName()));
+        if (propertyListModel != null) {
+            propertyListModel.clear();
+            properties.forEach(p -> propertyListModel.addElement(p.getAddress()));
+        }
+        if (tenantListModel != null) {
+            tenantListModel.clear();
+            tenants.forEach(t -> tenantListModel.addElement(t.getName()));
+        }
+        if (landlordListModel != null) {
+            landlordListModel.clear();
+            landlords.forEach(l -> landlordListModel.addElement(l.getName()));
+        }
+        if (leaseListModel != null) {
+            leaseListModel.clear();
+            leases.forEach(ls -> leaseListModel.addElement(
+                    "Room " + ls.getRoom().getRoomNumber() + " – " + ls.getTenant().getName()));
+        }
+        if (roomListModel != null) {
+            roomListModel.clear();
+            getAllRooms().forEach(r -> roomListModel.addElement(roomString(r)));
+        }
     }
 
     private List<Room> getAllRooms() {
         List<Room> all = new ArrayList<>();
-        properties.forEach(p -> { if (p.getRooms() != null) Collections.addAll(all, p.getRooms()); });
+        for (Property p : properties) if (p.getRooms() != null) Collections.addAll(all, p.getRooms());
         return all;
     }
 
-    private Room[] appendRoom(Room[] arr, Room r) {
-        Room[] result = Arrays.copyOf(arr, arr.length + 1);
-        result[arr.length] = r;
-        return result;
+    private static String roomString(Room r) {
+        return "Room " + r.getRoomNumber() + " - " + r.getDescription() +
+                " ($" + r.getRent() + ") " + (r.isAvailable() ? "[Available]" : "[Occupied]");
+    }
+
+    private static Room[] append(Room[] arr, Room r) {
+        Room[] out = Arrays.copyOf(arr, arr.length + 1);
+        out[arr.length] = r;
+        return out;
     }
 
     public static void main(String[] args) {
