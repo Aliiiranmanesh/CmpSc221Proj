@@ -3,7 +3,7 @@ package documents;
 import Building.Room;
 import Owner.LandLord;
 import occupant.Tenant;
-// add database functionality
+
 public class Lease {
     Room room;
     Tenant tenant;

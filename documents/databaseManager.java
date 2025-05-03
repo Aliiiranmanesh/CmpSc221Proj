@@ -64,7 +64,7 @@ public class databaseManager {
             ps.setString(1, p.getAddress());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
@@ -86,17 +86,17 @@ public class databaseManager {
 
             connection.commit();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
             try {
                 connection.rollback();
             } catch (SQLException ex) {
-                ex.printStackTrace();
+                ex.getMessage();
             }
         } finally {
             try {
                 connection.setAutoCommit(true);
             } catch (SQLException e) {
-                e.printStackTrace();
+                e.getMessage();
             }
         }
     }
@@ -107,7 +107,7 @@ public class databaseManager {
         try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery("SELECT ADDRESS FROM PROPERTIES")) {
             while (rs.next()) list.add(new Property(rs.getString("ADDRESS")));
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
         return list;
     }
@@ -119,7 +119,7 @@ public class databaseManager {
             ps.setString(3, t.getPhoneNum());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
@@ -128,7 +128,7 @@ public class databaseManager {
             ps.setString(1, t.getName());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
@@ -138,7 +138,7 @@ public class databaseManager {
             while (rs.next())
                 list.add(new Tenant(rs.getString("NAME"), rs.getInt("CREDIT_SCORE"), rs.getString("PHONE")));
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
         return list;
     }
@@ -148,7 +148,7 @@ public class databaseManager {
             ps.setString(1, l.getName());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
@@ -157,7 +157,7 @@ public class databaseManager {
             ps.setString(1, l.getName());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
@@ -166,7 +166,7 @@ public class databaseManager {
         try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery("SELECT NAME FROM LANDLORDS")) {
             while (rs.next()) list.add(new LandLord(rs.getString("NAME")));
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
         return list;
     }
@@ -185,7 +185,7 @@ public class databaseManager {
             ps.setInt(8, r.getOccupancy());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
@@ -197,7 +197,7 @@ public class databaseManager {
             ps.setString(3, room.getAddress());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 
